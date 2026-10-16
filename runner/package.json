@@ -6,7 +6,7 @@
   "description": "De motor van La Familia: pakt taken uit de wachtrij en laat de agents werken.",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "start": "tsx src/index.ts",
     "build": "tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "once": "tsx src/index.ts --once"
@@ -17,11 +17,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
     "@supabase/supabase-js": "^2.118.0",
-    "dotenv": "^18.0.8"
+    "dotenv": "^18.0.8",
+    "tsx": "^4.23.15"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",
-    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
 }

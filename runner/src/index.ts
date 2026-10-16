@@ -65,9 +65,18 @@ async function boot() {
   await say('mecanico', 'patron', 'rapport', 'De motor draait. La Familia is wakker.');
 }
 
+process.on('unhandledRejection', (e) => console.error('[runner] onafgehandelde fout:', e));
+
 async function main() {
   const once = process.argv.includes('--once');
-  await boot();
+  for (let i = 1; ; i++) {
+    try { await boot(); break; }
+    catch (e) {
+      console.error(`[runner] opstarten mislukt (poging ${i}):`, (e as Error).message);
+      if (once || i >= 10) throw e;
+      await new Promise((r) => setTimeout(r, 15_000));
+    }
+  }
   do {
     try {
       await processDecisions();
@@ -79,4 +88,4 @@ async function main() {
   } while (!once);
 }
 
-main();
+main().catch((e) => { console.error('[runner] gestopt:', (e as Error).message); process.exit(1); });
