@@ -3,6 +3,7 @@ import { env, has } from './lib/env.js';
 import * as consigliere from './agents/consigliere.js';
 import * as halcon from './agents/halcon.js';
 import * as mecanico from './agents/mecanico.js';
+import * as plaza from './agents/plaza.js';
 import { publishStatus } from './agents/mecanico.js';
 import { startServer } from './server.js';
 
@@ -13,6 +14,11 @@ const handlers: Record<string, (t: Task) => Promise<unknown>> = {
   'halcon.measure': halcon.measure,
   'patron.review_trends': halcon.reviewTrends,
   'mecanico.health': mecanico.health,
+  'capo.plan_collection': plaza.planCollection,
+  'artista.create': plaza.createDesign,
+  'inspector.check': plaza.inspect,
+  'consigliere.check_design': plaza.checkDesign,
+  'pregonero.publish': plaza.publish,
 };
 
 const MAX_ATTEMPTS = 3;
@@ -53,8 +59,12 @@ async function processDecisions() {
     const yes = a.status === 'approved';
     if (a.kind === 'trend' && a.payload?.trend_id) {
       await db.from('trends').update({ status: yes ? 'approved' : 'rejected' }).eq('id', a.payload.trend_id);
-      if (yes) await say('patron', 'capo', 'opdracht', `Jefe keurde goed: ${a.title.replace(/^Trend: /, '')}. Maak een collectieplan.`);
+      if (yes) { await say('patron', 'capo', 'opdracht', `Jefe keurde goed: ${a.title.replace(/^Trend: /, '')}. Maak een collectieplan.`); await enqueue('capo', 'capo.plan_collection', { trend_id: a.payload.trend_id }); }
       else await say('patron', 'halcon', 'veto', `Jefe wees af: ${a.title}.`);
+    }
+    if (a.kind === 'design' && a.payload?.design_id) {
+      if (yes) { await say('patron', 'pregonero', 'opdracht', `Jefe keurde goed: ${a.title.replace(/^Design: /, '')}. Zet het klaar als concept.`); await enqueue('pregonero', 'pregonero.publish', { design_id: a.payload.design_id }); }
+      else { await db.from('designs').update({ stage: 'afgekeurd', notes: 'afgewezen door de Jefe' }).eq('id', a.payload.design_id); await say('patron', 'artista', 'veto', `Jefe wees af: ${a.title.replace(/^Design: /, '')}.`); }
     }
     await db.from('approvals').update({ note: yes ? 'verwerkt: goedgekeurd' : 'verwerkt: afgewezen' }).eq('id', a.id);
   }

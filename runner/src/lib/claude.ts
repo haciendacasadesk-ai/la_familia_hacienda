@@ -42,6 +42,24 @@ export async function think(agent: string, system: string, prompt: string, opts:
   return res.content.map((b) => (b.type === 'text' ? b.text : '')).join('').trim();
 }
 
+/** Laat een agent naar een afbeelding kijken (JPEG, base64) en JSON teruggeven. */
+export async function lookJson<T>(agent: string, system: string, prompt: string, jpegBase64: string, opts: { tier?: Tier; maxTokens?: number } = {}): Promise<T> {
+  await checkBudget();
+  const model = opts.tier === 'fast' ? env.modelFast : env.modelStrong;
+  const res = await client.messages.create({
+    model,
+    max_tokens: opts.maxTokens ?? 1500,
+    system: system + '\n\nAntwoord uitsluitend met geldige JSON in precies de gevraagde vorm, zonder uitleg ervoor of erna.',
+    messages: [{ role: 'user', content: [
+      { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: jpegBase64 } },
+      { type: 'text', text: prompt },
+    ] }],
+  });
+  await db.from('ai_usage').insert({ agent, model, input_tokens: res.usage.input_tokens, output_tokens: res.usage.output_tokens });
+  const txt = res.content.map((b) => (b.type === 'text' ? b.text : '')).join('').trim();
+  try { return extractJson(txt) as T; } catch { throw new Error(`${agent} gaf geen geldige JSON terug: ${txt.slice(0, 160)}`); }
+}
+
 /** Haalt JSON uit een antwoord, ook als er tekst omheen staat of het in een codeblok zit. */
 function extractJson(txt: string): unknown {
   const fenced = txt.match(/```(?:json)?\s*([\s\S]*?)```/);

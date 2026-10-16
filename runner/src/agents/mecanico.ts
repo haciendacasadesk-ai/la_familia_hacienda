@@ -8,6 +8,7 @@ export async function health(_t: Task) {
   if (!has.etsy()) missing.push('Etsy (Seller App-sleutels)');
   else if (!(await setting<{ connected?: boolean }>('etsy_connection', {})).connected) missing.push('Etsy-shop (klik "Koppel Etsy" in het Bureau)');
   if (!has.gelato()) missing.push('Gelato (API-sleutel)');
+  if (!has.gemini()) missing.push('Gemini (GEMINI_API_KEY)');
   if (!etsyDemand.configured() && !googleDemand.configured()) missing.push('vraagdata (keyword-tool of Keyword Planner)');
 
   await publishStatus();
@@ -30,7 +31,7 @@ export async function publishStatus() {
     etsy_shop: Boolean(etsyConn.connected),
     gelato: has.gelato(),
     cloudflare: has.cloudflare(),
-    fal: has.fal(),
+    gemini: has.gemini(),
     demand: etsyDemand.configured() || googleDemand.configured(),
     at: new Date().toISOString(),
   } });

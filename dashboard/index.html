@@ -284,6 +284,9 @@ h3{font-family:var(--f-display);font-weight:400;font-size:18px;margin:0 0 8px;co
           <div class="srcs" id="srcs"></div>
           <h3 style="margin-top:6px">Drie pijlers</h3>
           <div class="board" id="board"></div>
+          <h3 style="margin-top:6px">Klaar voor productie</h3>
+          <p class="lead">Trends die door de IP-screening zijn. Start een collectie, dan maakt de familie er designs van.</p>
+          <ul class="watch" id="trendsReady"><li><span>Laden…</span></li></ul>
           <h3 style="margin-top:6px">Eerste meetlijst</h3>
           <p class="lead">Kandidaten uit gepubliceerde trendrapporten. Nog niet gemeten, dus nog niet goedgekeurd.</p>
           <ul class="watch" id="watch"></ul>
@@ -402,7 +405,7 @@ const S={
   jobs:[], flows:[], envelopes:[], log:[], edges:{}, designs:[], inbox:[], spawnT:1.2,
   niche:store.get('lf.niche',null), sel:'halcon', todo:store.get('lf.todo',{}), live:false, sb:null
 };
-const STAGES=[['brief','Brief','El Halcón'],['design','Design','El Artista'],['keuring','Keuring','El Inspector'],['ip','IP-check','El Consigliere'],['mockup','Mockup','El Fotógrafo'],['klaar','Klaar voor Etsy','El Pregonero']];
+const STAGES=[['brief','Brief','El Halcón'],['design','Design','El Artista'],['keuring','Keuring','El Inspector'],['ip','IP-check','El Consigliere'],['mockup','Bij de Jefe','El Patrón'],['klaar','Klaar voor Etsy','El Pregonero']];
 
 const TRENDS=['Dark academia studieprints','Plum Noir rozen','Plaid en countryside','Cozymaxxing leeshoek','Gotische klassiekers (Poe)','Vintage botanische platen','Opkomend hondenras in line-art','Katten in herfstsferen'];
 const PRODUCTS=[['Poster',24.95],['Canvas',44.95],['Metal print',54.95],['Ingelijste print',39.95],['Mok',19.95]];
@@ -902,7 +905,7 @@ function renderFeed(){const f=$('#ftype').value;const items=S.log.filter(e=>!f||
 function renderInbox(){
   const el=$('#inbox');
   if(!S.inbox.length){el.innerHTML='<p class="empty">Niets te beslissen. De familie werkt door.</p>';renderKpis();return;}
-  el.innerHTML=S.inbox.map(it=>`<div class="req"><span class="from">VAN ${esc(it.from).toUpperCase()}</span><span class="ti">${esc(it.title)}</span><span class="de">${esc(it.detail)}</span><div class="acts"><button class="btn yes" data-id="${it.id}" data-a="1">Goedkeuren</button><button class="btn no" data-id="${it.id}" data-a="0">Afwijzen</button></div></div>`).join('');
+  el.innerHTML=S.inbox.map(it=>`<div class="req"><span class="from">VAN ${esc(it.from).toUpperCase()}</span><span class="ti">${esc(it.title)}</span>${it.img?`<a href="${esc(it.img)}" target="_blank" rel="noopener"><img src="${esc(it.img)}" alt="${esc(it.title)}" loading="lazy" style="width:100%;max-width:280px;aspect-ratio:4/5;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block"></a>`:''}<span class="de">${esc(it.detail)}</span><div class="acts"><button class="btn yes" data-id="${it.id}" data-a="1">Goedkeuren</button><button class="btn no" data-id="${it.id}" data-a="0">Afwijzen</button></div></div>`).join('');
   renderKpis();
 }
 $('#inbox').addEventListener('click',ev=>{
@@ -1048,10 +1051,10 @@ async function goLive(){
   sb.channel('hacienda')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'messages'},({new:m})=>{S.flows.push({steps:[{f:m.from_agent,t:m.to_agent,ty:TYPES[m.type]?m.type:'rapport',m:m.body}],i:0});})
     .on('postgres_changes',{event:'*',schema:'public',table:'approvals'},loadApprovals)
-    .on('postgres_changes',{event:'*',schema:'public',table:'designs'},loadDesigns)
+    .on('postgres_changes',{event:'*',schema:'public',table:'designs'},()=>{loadDesigns();loadTrends();})
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'keyword_metrics'},loadWatch)
     .subscribe();
-  await Promise.all([loadApprovals(),loadDesigns(),loadWatch(),loadEtsy(),loadIntegrations()]);
+  await Promise.all([loadApprovals(),loadDesigns(),loadWatch(),loadEtsy(),loadIntegrations(),loadTrends()]);
   setInterval(()=>{loadIntegrations();loadEtsy();},60000);
   if(location.hash==='#etsy-gekoppeld'){showPane('bureau');history.replaceState(null,'',location.pathname);}
   renderKpis();
@@ -1079,12 +1082,23 @@ async function connectEtsy(){
 }
 async function loadApprovals(){
   const {data}=await S.sb.from('approvals').select('*').eq('status','pending').order('created_at',{ascending:false});
-  S.inbox=(data||[]).map(a=>({id:'a'+a.id,live:a.id,from:nm(a.requested_by),title:a.title,detail:a.detail||''}));renderInbox();
+  S.inbox=(data||[]).map(a=>({id:'a'+a.id,live:a.id,from:nm(a.requested_by),title:a.title,detail:a.detail||'',img:a.payload&&a.payload.image_url}));renderInbox();
 }
 async function loadDesigns(){
   const {data}=await S.sb.from('designs').select('id,title,stage').order('created_at',{ascending:true}).limit(200);
   S.designs=(data||[]).map(d=>({id:d.id,name:d.title,stage:d.stage}));S.done=S.designs.filter(d=>d.stage==='klaar').length;renderPipe();
 }
+async function loadTrends(){
+  const {data}=await S.sb.from('trends').select('id,theme,pillar,status,ip_risk').in('status',['screened','approved']).order('id');
+  const el=$('#trendsReady'); if(!el)return;
+  el.innerHTML=(data&&data.length)?data.map(t=>`<li><span>${esc(t.theme)}</span><small>${esc(t.pillar).toUpperCase()} · IP ${esc(t.ip_risk||'?')}</small><span class="m">${t.status==='approved'?'in productie':`<button class="btn yes" data-trend="${t.id}" type="button">Maak collectie</button>`}</span></li>`).join(''):'<li><span>Nog geen gescreende trends.</span></li>';
+}
+document.addEventListener('click',async ev=>{
+  const b=ev.target.closest('button[data-trend]'); if(!b||!S.live)return;
+  b.disabled=true; b.textContent='Gestart';
+  const {error}=await S.sb.from('tasks').insert({agent:'capo',kind:'capo.plan_collection',payload:{trend_id:Number(b.dataset.trend)}});
+  if(error){b.disabled=false;b.textContent='Mislukt, opnieuw';}
+});
 async function loadWatch(){
   const {data}=await S.sb.from('keyword_latest').select('keyword,theme,pillar,etsy_active_listings,opportunity').order('opportunity',{ascending:false,nullsFirst:false}).limit(12);
   if(!data||!data.length)return;

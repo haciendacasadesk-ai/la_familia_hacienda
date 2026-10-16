@@ -20,6 +20,9 @@ export const env = {
   cloudflareAccountId: opt('CLOUDFLARE_ACCOUNT_ID'),
   cloudflareToken: opt('CLOUDFLARE_API_TOKEN'),
   falKey: opt('FAL_KEY'),
+  geminiKey: opt('GEMINI_API_KEY'),
+  // Nano Banana 2.1 volgens https://ai.google.dev/gemini-api/docs/image-generation
+  geminiImageModel: opt('GEMINI_IMAGE_MODEL') ?? 'gemini-nano-banana-2.1',
   pollMs: Number(opt('POLL_MS') ?? 5000),
   port: Number(opt('PORT') ?? 8080),
   // Openbaar adres van de motor (Railway → Settings → Networking → Generate Domain), bijv. https://la-familia.up.railway.app
@@ -33,4 +36,5 @@ export const has = {
   gelato: () => Boolean(env.gelatoApiKey),
   cloudflare: () => Boolean(env.cloudflareAccountId && env.cloudflareToken),
   fal: () => Boolean(env.falKey),
+  gemini: () => Boolean(env.geminiKey),
 };
