@@ -19,6 +19,7 @@ const handlers: Record<string, (t: Task) => Promise<unknown>> = {
   'inspector.check': plaza.inspect,
   'consigliere.check_design': plaza.checkDesign,
   'pregonero.publish': plaza.publish,
+  'patron.daily_collection': plaza.dailyCollection,
 };
 
 const MAX_ATTEMPTS = 3;
@@ -80,6 +81,9 @@ async function boot() {
   if (cand && !busy) await enqueue('consigliere', 'consigliere.screen_trends');
   // Zijn de Etsy-sleutels er nu wel? Dan hoeven uitgestelde metingen niet langer te wachten.
   if (has.etsy()) await db.from('tasks').update({ run_after: new Date().toISOString() }).eq('kind', 'halcon.measure').eq('status', 'queued');
+  // El Patrón start dagelijks zelf een collectie
+  const { count: daily } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('kind', 'patron.daily_collection').in('status', ['queued', 'running']);
+  if (!daily) await enqueue('patron', 'patron.daily_collection');
   await publishStatus();
   await say('mecanico', 'patron', 'rapport', 'De motor draait. La Familia is wakker.');
 }

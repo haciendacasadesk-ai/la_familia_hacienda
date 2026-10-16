@@ -145,3 +145,46 @@ export async function publish(t: Task) {
   await say('pregonero', 'capo', 'rapport', `Concept klaar in Gelato: "${L.title}". Gelato zet het als niet-zichtbaar product in Etsy; publiceren doet de Jefe.`);
   return { gelato: product.id, status: product.status };
 }
+
+/* ---------------- El Patrón: dagelijks de volgende collectie starten ---------------- */
+
+/**
+ * Kiest zelf de volgende trend als er niet te veel werk op de plank ligt.
+ * Met vraagdata: hoogste kansscore. Zonder vraagdata (tijdelijk): laagste IP-risico en het minste aanbod op Etsy.
+ */
+export async function dailyCollection(_t: Task) {
+  const perDay = await setting<number>('collections_per_day', 1);
+  const since = new Date(); since.setUTCHours(0, 0, 0, 0);
+  const { count: startedToday } = await db.from('tasks').select('id', { count: 'exact', head: true })
+    .eq('kind', 'capo.plan_collection').gte('created_at', since.toISOString());
+  const { count: waiting } = await db.from('approvals').select('id', { count: 'exact', head: true })
+    .eq('status', 'pending').eq('kind', 'design');
+
+  let started = false;
+  if ((startedToday ?? 0) < perDay && (waiting ?? 0) < 6) {
+    const { data: trends } = await db.from('trends').select('id, theme, ip_risk').eq('status', 'screened');
+    if (trends?.length) {
+      const { data: kw } = await db.from('keyword_latest').select('trend_id, etsy_active_listings, opportunity');
+      const score = (id: number) => {
+        const rows = (kw ?? []).filter((k) => k.trend_id === id);
+        const opp = rows.map((r) => r.opportunity).filter((v): v is number => v != null);
+        if (opp.length) return { opp: Math.max(...opp), supply: 0 };
+        const sup = rows.map((r) => r.etsy_active_listings).filter((v): v is number => v != null);
+        return { opp: null as number | null, supply: sup.length ? sup.reduce((a, b) => a + b, 0) / sup.length : Infinity };
+      };
+      const risk = (r: string | null) => (r === 'laag' ? 0 : r === 'middel' ? 1 : 2);
+      const ranked = trends.map((t) => ({ ...t, ...score(t.id) })).sort((a, b) =>
+        (b.opp ?? -1) - (a.opp ?? -1) || risk(a.ip_risk) - risk(b.ip_risk) || a.supply - b.supply);
+      const pick = ranked[0];
+      const why = pick.opp != null ? `hoogste kansscore (${pick.opp.toFixed(1)})` : `laag IP-risico en ${Number.isFinite(pick.supply) ? `gemiddeld ${Math.round(pick.supply).toLocaleString('nl-NL')} listings` : 'nog niet gemeten aanbod'}`;
+      await say('patron', 'capo', 'opdracht', `Volgende collectie: ${pick.theme}. Gekozen op ${why}.`);
+      await enqueue('capo', 'capo.plan_collection', { trend_id: pick.id });
+      started = true;
+    }
+  }
+  // morgen om 07:00 UTC weer
+  const next = new Date(); next.setUTCDate(next.getUTCDate() + (started ? 1 : 0)); next.setUTCHours(7, 0, 0, 0);
+  if (next <= new Date()) next.setUTCHours(next.getUTCHours() + 6);
+  await enqueue('patron', 'patron.daily_collection', {}, next);
+  return { started };
+}
