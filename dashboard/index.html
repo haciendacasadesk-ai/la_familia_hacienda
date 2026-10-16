@@ -266,6 +266,10 @@ h3{font-family:var(--f-display);font-weight:400;font-size:18px;margin:0 0 8px;co
           <div id="inbox" class="sect" style="gap:8px"></div>
         </div>
         <div class="sect">
+          <h3>Etsy-koppeling</h3>
+          <div class="req" id="etsyBox" style="border-left-color:var(--azul)"><span class="ti" id="etsyState">Status laden…</span><span class="de" id="etsyHint">Na het koppelen mag de familie concept-listings plaatsen en orders lezen. Publiceren doe je zelf.</span><div class="acts"><button class="btn yes" id="etsyBtn" type="button">Koppel Etsy</button></div></div>
+        </div>
+        <div class="sect">
           <h3>Jouw taken</h3>
           <p class="lead">Zodra deze klaar zijn, koppel ik Etsy en Gelato en gaat de simulatie over op echte data.</p>
           <ul class="todo" id="todo"></ul>
@@ -1011,6 +1015,7 @@ $('#speed').addEventListener('click',ev=>{const b=ev.target.closest('button');if
 $('#kill').addEventListener('click',ev=>{S.paused=!S.paused;ev.currentTarget.setAttribute('aria-pressed',S.paused);$('#veil').hidden=!S.paused;ev.currentTarget.textContent=S.paused?'Familie wekken':'La Familia duerme';});
 $('#ftype').insertAdjacentHTML('beforeend',Object.entries(TYPES).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join(''));
 $('#ftype').addEventListener('change',renderFeed);
+$('#etsyBtn').addEventListener('click',connectEtsy);
 $('#legend').innerHTML=Object.values(TYPES).map(v=>`<span><i style="background:${v.c}"></i>${v.label}</span>`).join('');
 
 /* ---------- live (Supabase) ---------- */
@@ -1042,8 +1047,24 @@ async function goLive(){
     .on('postgres_changes',{event:'*',schema:'public',table:'designs'},loadDesigns)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'keyword_metrics'},loadWatch)
     .subscribe();
-  await Promise.all([loadApprovals(),loadDesigns(),loadWatch()]);
+  await Promise.all([loadApprovals(),loadDesigns(),loadWatch(),loadEtsy()]);
+  if(location.hash==='#etsy-gekoppeld'){showPane('bureau');history.replaceState(null,'',location.pathname);}
   renderKpis();
+}
+async function loadEtsy(){
+  const {data}=await S.sb.from('settings').select('value').eq('key','etsy_connection').maybeSingle();
+  const v=data?.value||{};
+  $('#etsyState').textContent=v.connected?`Gekoppeld · shop ${v.shop_id}`:'Nog niet gekoppeld';
+  $('#etsyBtn').textContent=v.connected?'Opnieuw koppelen':'Koppel Etsy';
+}
+async function connectEtsy(){
+  const C=window.LF_CONFIG||{};
+  if(!S.live){$('#etsyHint').textContent='Log eerst in op De Hacienda.';return;}
+  if(!C.runnerUrl){$('#etsyHint').textContent='Het adres van de motor ontbreekt nog in config.js (runnerUrl).';return;}
+  const state=Array.from(crypto.getRandomValues(new Uint8Array(24)),b=>b.toString(16).padStart(2,'0')).join('');
+  const {error}=await S.sb.from('oauth_states').insert({state});
+  if(error){$('#etsyHint').textContent=`Starten mislukt: ${error.message}`;return;}
+  location.href=`${C.runnerUrl.replace(/\/$/,'')}/etsy/connect?state=${state}`;
 }
 async function loadApprovals(){
   const {data}=await S.sb.from('approvals').select('*').eq('status','pending').order('created_at',{ascending:false});

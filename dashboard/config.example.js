@@ -2,5 +2,6 @@
 // Zet NOOIT de service role key hier.
 window.LF_CONFIG = {
   supabaseUrl: 'https://JOUW-PROJECT.supabase.co',
+  runnerUrl: 'https://JOUW-MOTOR.up.railway.app',
   supabaseAnonKey: 'JOUW_ANON_KEY',
 };

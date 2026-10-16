@@ -18,6 +18,11 @@ export const env = {
   etsySharedSecret: opt('ETSY_SHARED_SECRET'),
   gelatoApiKey: opt('GELATO_API_KEY'),
   pollMs: Number(opt('POLL_MS') ?? 5000),
+  port: Number(opt('PORT') ?? 8080),
+  // Openbaar adres van de motor (Railway → Settings → Networking → Generate Domain), bijv. https://la-familia.up.railway.app
+  publicUrl: opt('PUBLIC_URL'),
+  // Adres van De Hacienda op Vercel, om na het koppelen naar terug te sturen
+  dashboardUrl: opt('DASHBOARD_URL'),
 };
 
 export const has = {

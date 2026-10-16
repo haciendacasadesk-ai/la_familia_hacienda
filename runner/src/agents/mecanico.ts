@@ -1,4 +1,4 @@
-import { db, say, enqueue, type Task } from '../lib/db.js';
+import { db, say, enqueue, setting, type Task } from '../lib/db.js';
 import { has } from '../lib/env.js';
 import { etsyDemand, googleDemand } from '../lib/demand.js';
 
@@ -6,6 +6,7 @@ import { etsyDemand, googleDemand } from '../lib/demand.js';
 export async function health(_t: Task) {
   const missing: string[] = [];
   if (!has.etsy()) missing.push('Etsy (Seller App-sleutels)');
+  else if (!(await setting<{ connected?: boolean }>('etsy_connection', {})).connected) missing.push('Etsy-shop (klik "Koppel Etsy" in het Bureau)');
   if (!has.gelato()) missing.push('Gelato (API-sleutel)');
   if (!etsyDemand.configured() && !googleDemand.configured()) missing.push('vraagdata (keyword-tool of Keyword Planner)');
 

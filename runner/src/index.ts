@@ -3,6 +3,7 @@ import { env } from './lib/env.js';
 import * as consigliere from './agents/consigliere.js';
 import * as halcon from './agents/halcon.js';
 import * as mecanico from './agents/mecanico.js';
+import { startServer } from './server.js';
 
 // Welke agent wat kan. Nieuwe taken komen hier bij naarmate agents live gaan.
 const handlers: Record<string, (t: Task) => Promise<unknown>> = {
@@ -73,6 +74,7 @@ process.on('unhandledRejection', (e) => console.error('[runner] onafgehandelde f
 
 async function main() {
   const once = process.argv.includes('--once');
+  if (!once) startServer();
   for (let i = 1; ; i++) {
     try { await boot(); break; }
     catch (e) {
