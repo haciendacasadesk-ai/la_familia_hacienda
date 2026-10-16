@@ -12,7 +12,7 @@
     "once": "tsx src/index.ts --once"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
