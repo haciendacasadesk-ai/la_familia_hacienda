@@ -42,7 +42,7 @@ De motor moet altijd draaien. Lokaal is prima om te testen; voor 24/7 zet je hem
 
 ### 3. Dashboard
 
-1. Kopieer `dashboard/config.example.js` naar `dashboard/config.js` en vul de URL en de **anon** key in.
+1. `dashboard/config.js` bevat de project-URL en de **anon** key (publiek, beveiligd via RLS).
 2. Host de map `dashboard` als statische site (Netlify, Vercel of GitHub Pages).
 3. Voeg die URL toe bij Supabase → **Authentication → URL Configuration → Redirect URLs**.
 
