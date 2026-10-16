@@ -1,5 +1,5 @@
 import { db, say, enqueue, type Task } from './lib/db.js';
-import { env } from './lib/env.js';
+import { env, has } from './lib/env.js';
 import * as consigliere from './agents/consigliere.js';
 import * as halcon from './agents/halcon.js';
 import * as mecanico from './agents/mecanico.js';
@@ -67,6 +67,8 @@ async function boot() {
   const { count: cand } = await db.from('trends').select('id', { count: 'exact', head: true }).eq('status', 'candidate');
   const { count: busy } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('kind', 'consigliere.screen_trends').in('status', ['queued', 'running']);
   if (cand && !busy) await enqueue('consigliere', 'consigliere.screen_trends');
+  // Zijn de Etsy-sleutels er nu wel? Dan hoeven uitgestelde metingen niet langer te wachten.
+  if (has.etsy()) await db.from('tasks').update({ run_after: new Date().toISOString() }).eq('kind', 'halcon.measure').eq('status', 'queued');
   await say('mecanico', 'patron', 'rapport', 'De motor draait. La Familia is wakker.');
 }
 

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { db, say } from './db.js';
+import { db, say, enqueue } from './db.js';
 import { env, has } from './env.js';
 
 // Etsy OAuth 2.0 met PKCE. https://developers.etsy.com/documentation/essentials/authentication
@@ -72,6 +72,7 @@ export async function finishAuth(code: string, state: string): Promise<{ shopId:
   });
   await db.from('settings').upsert({ key: 'etsy_connection', value: { connected: true, shop_id: me.shop_id, at: new Date().toISOString() } });
   await say('mecanico', 'patron', 'rapport', `Etsy gekoppeld (shop ${me.shop_id}). De familie mag nu concept-listings plaatsen en orders lezen.`);
+  await enqueue('halcon', 'halcon.measure');
   return { shopId: me.shop_id };
 }
 
