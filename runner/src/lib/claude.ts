@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { env } from './env.js';
-import { db } from './db.js';
+import { db, setting, say } from './db.js';
 
 const client = new Anthropic({ apiKey: env.anthropicKey });
 
@@ -10,7 +10,21 @@ export type Tier = 'strong' | 'fast';
  * Laat een agent denken. Elke aanroep wordt gelogd per agent,
  * zodat El Banquero de AI-kosten meeneemt in de winst.
  */
+let alarmed = '';
+/** Harde dagelijkse grens op het aantal AI-aanroepen (settings.ai_daily_cap_calls). */
+async function checkBudget() {
+  const cap = await setting<number>('ai_daily_cap_calls', 200);
+  const since = new Date(); since.setUTCHours(0, 0, 0, 0);
+  const { count } = await db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('created_at', since.toISOString());
+  if ((count ?? 0) >= cap) {
+    const day = since.toISOString().slice(0, 10);
+    if (alarmed !== day) { alarmed = day; await say('banquero', 'patron', 'geld', `AI-plafond bereikt (${cap} aanroepen vandaag). Agents pauzeren tot morgen.`); }
+    throw new Error(`AI-dagplafond bereikt (${cap})`);
+  }
+}
+
 export async function think(agent: string, system: string, prompt: string, opts: { tier?: Tier; maxTokens?: number } = {}): Promise<string> {
+  await checkBudget();
   const model = opts.tier === 'strong' ? env.modelStrong : env.modelFast;
   const res = await client.messages.create({
     model,
