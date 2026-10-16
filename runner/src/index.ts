@@ -62,6 +62,10 @@ async function boot() {
   // Zorg dat de Mecánico altijd een gezondheidscheck in de planning heeft
   const { count } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('kind', 'mecanico.health').in('status', ['queued', 'running']);
   if (!count) await enqueue('mecanico', 'mecanico.health');
+  // Staan er nog ongescreende trends en is er geen screening onderweg? Dan opnieuw klaarzetten.
+  const { count: cand } = await db.from('trends').select('id', { count: 'exact', head: true }).eq('status', 'candidate');
+  const { count: busy } = await db.from('tasks').select('id', { count: 'exact', head: true }).eq('kind', 'consigliere.screen_trends').in('status', ['queued', 'running']);
+  if (cand && !busy) await enqueue('consigliere', 'consigliere.screen_trends');
   await say('mecanico', 'patron', 'rapport', 'De motor draait. La Familia is wakker.');
 }
 

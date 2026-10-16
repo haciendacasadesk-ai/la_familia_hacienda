@@ -38,17 +38,38 @@ export async function think(agent: string, system: string, prompt: string, opts:
     input_tokens: res.usage.input_tokens,
     output_tokens: res.usage.output_tokens,
   });
+  if (res.stop_reason === 'max_tokens') console.warn(`[${agent}] antwoord afgekapt op max_tokens (${opts.maxTokens ?? 2000})`);
   return res.content.map((b) => (b.type === 'text' ? b.text : '')).join('').trim();
 }
 
-/** Zelfde als think(), maar verwacht JSON terug (in een ```json-blok of kaal). */
+/** Haalt JSON uit een antwoord, ook als er tekst omheen staat of het in een codeblok zit. */
+function extractJson(txt: string): unknown {
+  const fenced = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
+  const body = (fenced ? fenced[1] : txt).trim();
+  try { return JSON.parse(body); } catch { /* verder zoeken */ }
+  const starts = [body.indexOf('['), body.indexOf('{')].filter((i) => i >= 0);
+  if (!starts.length) throw new Error('geen JSON gevonden');
+  const start = Math.min(...starts);
+  const end = Math.max(body.lastIndexOf(']'), body.lastIndexOf('}'));
+  return JSON.parse(body.slice(start, end + 1));
+}
+
+/** Zelfde als think(), maar verwacht JSON terug. */
 export async function thinkJson<T>(agent: string, system: string, prompt: string, opts: { tier?: Tier; maxTokens?: number } = {}): Promise<T> {
-  const txt = await think(agent, system + '\n\nAntwoord uitsluitend met geldige JSON, zonder uitleg.', prompt, opts);
-  const m = txt.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const raw = (m ? m[1] : txt).trim();
+  const txt = await think(agent, system + '\n\nAntwoord uitsluitend met geldige JSON in precies de gevraagde vorm, zonder uitleg ervoor of erna.', prompt, opts);
   try {
-    return JSON.parse(raw) as T;
+    return extractJson(txt) as T;
   } catch {
-    throw new Error(`${agent} gaf geen geldige JSON terug: ${raw.slice(0, 200)}`);
+    throw new Error(`${agent} gaf geen geldige JSON terug (mogelijk afgekapt): ${txt.slice(0, 160)}`);
   }
+}
+
+/** Accepteert een lijst, of een object met één lijst erin (bijv. {"beoordelingen": [...]}). */
+export function asArray<T>(v: unknown): T[] {
+  if (Array.isArray(v)) return v as T[];
+  if (v && typeof v === 'object') {
+    const arr = Object.values(v as Record<string, unknown>).find(Array.isArray);
+    if (arr) return arr as T[];
+  }
+  throw new Error('verwachtte een lijst');
 }

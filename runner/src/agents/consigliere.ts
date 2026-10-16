@@ -1,5 +1,5 @@
 import { db, say, enqueue, type Task } from '../lib/db.js';
-import { thinkJson } from '../lib/claude.js';
+import { thinkJson, asArray } from '../lib/claude.js';
 
 const SYSTEM = `Je bent El Consigliere, compliance- en IP-bewaker van een Etsy-store met print-on-demand wall art (wereldwijde markt).
 Je beoordeelt trendthema's op risico voor merkrecht en auteursrecht, en op Etsy-beleid (Creativity Standards, productiepartner, AI-melding).
@@ -14,9 +14,10 @@ export async function screenTrends(_t: Task) {
   if (error) throw error;
   if (!trends?.length) return { screened: 0 };
 
-  const out = await thinkJson<Screen[]>('consigliere', SYSTEM,
-    `Beoordeel deze trendthema's. Geef per thema: theme (exact overnemen), risk, notes (max 2 zinnen, Nederlands), avoid (lijst van concrete dingen die de designer moet vermijden).\n\n${trends.map((t) => `- ${t.theme} [${t.pillar}]`).join('\n')}`,
-    { tier: 'strong' });
+  const raw = await thinkJson<unknown>('consigliere', SYSTEM,
+    `Beoordeel deze trendthema's. Geef een JSON-lijst, per thema één object: {"theme": exact overnemen, "risk": "laag"|"middel"|"hoog", "notes": max 1 korte zin in het Nederlands, "avoid": max 4 korte punten}.\n\n${trends.map((t) => `- ${t.theme} [${t.pillar}]`).join('\n')}`,
+    { tier: 'strong', maxTokens: 6000 });
+  const out = asArray<Screen>(raw);
 
   let ok = 0;
   for (const s of out) {

@@ -1,5 +1,5 @@
 import { db, say, enqueue, askJefe, type Task } from '../lib/db.js';
-import { thinkJson } from '../lib/claude.js';
+import { thinkJson, asArray } from '../lib/claude.js';
 import { has } from '../lib/env.js';
 import { countActiveListings } from '../lib/etsy.js';
 import { etsyDemand, googleDemand, opportunity } from '../lib/demand.js';
@@ -16,9 +16,10 @@ export async function expand(_t: Task) {
     await say('halcon', 'patron', 'rapport', 'Geen gescreende trends om zoektermen voor te maken.');
     return { keywords: 0 };
   }
-  const out = await thinkJson<Array<{ theme: string; keywords: string[] }>>('halcon', SYSTEM,
+  const raw = await thinkJson<unknown>('halcon', SYSTEM,
     `Maak per thema 12 Etsy-zoektermen. Geef JSON: [{"theme": "...", "keywords": ["..."]}].\n\n${trends.map((t) => `- ${t.theme} [${t.pillar}]${t.ip_notes ? ` — Consigliere: ${t.ip_notes}` : ''}`).join('\n')}`,
-    { tier: 'fast', maxTokens: 4000 });
+    { tier: 'fast', maxTokens: 8000 });
+  const out = asArray<{ theme: string; keywords: string[] }>(raw);
 
   let n = 0;
   for (const row of out) {
