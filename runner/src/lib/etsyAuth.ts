@@ -73,6 +73,7 @@ export async function finishAuth(code: string, state: string): Promise<{ shopId:
   await db.from('settings').upsert({ key: 'etsy_connection', value: { connected: true, shop_id: me.shop_id, at: new Date().toISOString() } });
   await say('mecanico', 'patron', 'rapport', `Etsy gekoppeld (shop ${me.shop_id}). De familie mag nu concept-listings plaatsen en orders lezen.`);
   await enqueue('halcon', 'halcon.measure');
+  await db.from('settings').update({ value: { ...(await db.from('settings').select('value').eq('key', 'integrations').maybeSingle()).data?.value, etsy_shop: true } }).eq('key', 'integrations');
   return { shopId: me.shop_id };
 }
 

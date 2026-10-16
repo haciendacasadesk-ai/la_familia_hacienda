@@ -3,6 +3,7 @@ import { env, has } from './lib/env.js';
 import * as consigliere from './agents/consigliere.js';
 import * as halcon from './agents/halcon.js';
 import * as mecanico from './agents/mecanico.js';
+import { publishStatus } from './agents/mecanico.js';
 import { startServer } from './server.js';
 
 // Welke agent wat kan. Nieuwe taken komen hier bij naarmate agents live gaan.
@@ -69,6 +70,7 @@ async function boot() {
   if (cand && !busy) await enqueue('consigliere', 'consigliere.screen_trends');
   // Zijn de Etsy-sleutels er nu wel? Dan hoeven uitgestelde metingen niet langer te wachten.
   if (has.etsy()) await db.from('tasks').update({ run_after: new Date().toISOString() }).eq('kind', 'halcon.measure').eq('status', 'queued');
+  await publishStatus();
   await say('mecanico', 'patron', 'rapport', 'De motor draait. La Familia is wakker.');
 }
 

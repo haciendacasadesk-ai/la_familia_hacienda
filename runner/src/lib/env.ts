@@ -17,6 +17,9 @@ export const env = {
   etsyKeystring: opt('ETSY_KEYSTRING'),
   etsySharedSecret: opt('ETSY_SHARED_SECRET'),
   gelatoApiKey: opt('GELATO_API_KEY'),
+  cloudflareAccountId: opt('CLOUDFLARE_ACCOUNT_ID'),
+  cloudflareToken: opt('CLOUDFLARE_API_TOKEN'),
+  falKey: opt('FAL_KEY'),
   pollMs: Number(opt('POLL_MS') ?? 5000),
   port: Number(opt('PORT') ?? 8080),
   // Openbaar adres van de motor (Railway → Settings → Networking → Generate Domain), bijv. https://la-familia.up.railway.app
@@ -28,4 +31,6 @@ export const env = {
 export const has = {
   etsy: () => Boolean(env.etsyKeystring && env.etsySharedSecret),
   gelato: () => Boolean(env.gelatoApiKey),
+  cloudflare: () => Boolean(env.cloudflareAccountId && env.cloudflareToken),
+  fal: () => Boolean(env.falKey),
 };

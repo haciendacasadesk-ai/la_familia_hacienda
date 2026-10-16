@@ -10,6 +10,8 @@ export async function health(_t: Task) {
   if (!has.gelato()) missing.push('Gelato (API-sleutel)');
   if (!etsyDemand.configured() && !googleDemand.configured()) missing.push('vraagdata (keyword-tool of Keyword Planner)');
 
+  await publishStatus();
+
   const since = new Date(); since.setUTCHours(0, 0, 0, 0);
   const { count } = await db.from('ai_usage').select('id', { count: 'exact', head: true }).gte('created_at', since.toISOString());
 
@@ -18,4 +20,18 @@ export async function health(_t: Task) {
 
   await enqueue('mecanico', 'mecanico.health', {}, new Date(Date.now() + 6 * 3600_000));
   return { missing };
+}
+
+/** Zet de echte status van alle koppelingen in settings, zodat het dashboard die kan tonen (zonder sleutels). */
+export async function publishStatus() {
+  const etsyConn = await setting<{ connected?: boolean; shop_id?: number }>('etsy_connection', {});
+  await db.from('settings').upsert({ key: 'integrations', value: {
+    etsy_keys: has.etsy(),
+    etsy_shop: Boolean(etsyConn.connected),
+    gelato: has.gelato(),
+    cloudflare: has.cloudflare(),
+    fal: has.fal(),
+    demand: etsyDemand.configured() || googleDemand.configured(),
+    at: new Date().toISOString(),
+  } });
 }

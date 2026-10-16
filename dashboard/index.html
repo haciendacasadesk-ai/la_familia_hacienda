@@ -936,6 +936,10 @@ function renderTodo(){
 $('#todo').addEventListener('change',ev=>{const k=ev.target.dataset.k;if(!k)return;S.todo[k]=ev.target.checked;store.set('lf.todo',S.todo);renderChips();renderBoard();
   if(ev.target.checked)addLog('jefe','mecanico','rapport',`Taak afgerond: ${TODO.find(x=>x[0]===k)[1]}`);});
 function renderChips(){
+  if(S.live&&S.integr){const I=S.integr;
+    $('#chipEtsy').innerHTML=`<i class="dot ${I.etsy_shop?'ok':'wait'}"></i>Etsy: ${I.etsy_shop?'gekoppeld':I.etsy_keys?'klik Koppel Etsy':'sleutels ontbreken'}`;
+    $('#chipGelato').innerHTML=`<i class="dot ${I.gelato?'ok':'wait'}"></i>Gelato: ${I.gelato?'gekoppeld':'sleutel ontbreekt'}`;
+    return;}
   const e=S.todo.etsy&&S.todo.sellerapp,g=S.todo.gelato&&S.todo.koppel;
   $('#chipEtsy').innerHTML=`<i class="dot ${e?'ok':'wait'}"></i>Etsy: ${e?'klaar om te koppelen':S.todo.etsy?'Seller App nodig':'wacht op store'}`;
   $('#chipGelato').innerHTML=`<i class="dot ${g?'ok':'wait'}"></i>Gelato: ${g?'gekoppeld':S.todo.gelato?'koppelen aan Etsy':'wacht op account'}`;
@@ -1047,9 +1051,16 @@ async function goLive(){
     .on('postgres_changes',{event:'*',schema:'public',table:'designs'},loadDesigns)
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'keyword_metrics'},loadWatch)
     .subscribe();
-  await Promise.all([loadApprovals(),loadDesigns(),loadWatch(),loadEtsy()]);
+  await Promise.all([loadApprovals(),loadDesigns(),loadWatch(),loadEtsy(),loadIntegrations()]);
+  setInterval(()=>{loadIntegrations();loadEtsy();},60000);
   if(location.hash==='#etsy-gekoppeld'){showPane('bureau');history.replaceState(null,'',location.pathname);}
   renderKpis();
+}
+async function loadIntegrations(){
+  const {data}=await S.sb.from('settings').select('value').eq('key','integrations').maybeSingle();
+  S.integr=data?.value||null;
+  if(S.integr){const I=S.integr;Object.assign(S.todo,{etsy:I.etsy_shop||S.todo.etsy,sellerapp:I.etsy_keys||S.todo.sellerapp,gelato:I.gelato||S.todo.gelato,koppel:I.gelato||S.todo.koppel});renderTodo();renderBoard();}
+  renderChips();
 }
 async function loadEtsy(){
   const {data}=await S.sb.from('settings').select('value').eq('key','etsy_connection').maybeSingle();
