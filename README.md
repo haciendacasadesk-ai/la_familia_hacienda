@@ -2,7 +2,7 @@
 
 Een organisatie van AI-agents die print-on-demand Etsy-stores runt, met Gelato als productiepartner. Het dashboard (De Hacienda) laat live zien wie waaraan werkt en wie met wie praat.
 
-Store 1: **PrintCabinet**, een trendstudio voor wall art met drie pijlers (esthetiek-drops, klassiekers en publiek domein, huisdieren per ras). Alleen trends met bewezen vraag en weinig aanbod.
+Store 1: **PaperParlorCrafts**, een trendstudio voor wall art met drie pijlers (esthetiek-drops, klassiekers en publiek domein, huisdieren per ras). Alleen trends met bewezen vraag en weinig aanbod.
 
 ## Onderdelen
 
