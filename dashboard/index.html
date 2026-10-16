@@ -294,7 +294,7 @@ h3{font-family:var(--f-display);font-weight:400;font-size:18px;margin:0 0 8px;co
     </section>
   </div>
 
-  <div class="login" id="login" hidden><form id="loginForm"><b>De Hacienda</b><p>Log in met je e-mail. Je krijgt een inloglink.</p><label for="lEmail" class="mono" style="font-size:11px;color:var(--sand-faint)">E-MAIL</label><input id="lEmail" type="email" required autocomplete="email"><button class="btn yes" type="submit">Stuur inloglink</button><p id="lMsg"></p></form></div>
+  <div class="login" id="login" hidden><form id="loginForm"><b>De Hacienda</b><p>Log in om de familie aan het werk te zien.</p><label for="lEmail" class="mono" style="font-size:11px;color:var(--sand-faint)">E-MAIL</label><input id="lEmail" type="email" required autocomplete="email"><label for="lPass" class="mono" style="font-size:11px;color:var(--sand-faint)">WACHTWOORD</label><input id="lPass" type="password" required autocomplete="current-password"><button class="btn yes" type="submit">Inloggen</button><p id="lMsg"></p></form></div>
   <div class="foot">
     <span id="footMode">Simulatiemodus: agents, berichten en testorders zijn voorbeelden. Er wordt niets op Etsy gepubliceerd.</span>
     <span>Klik op een agent op de kaart voor zijn dossier.</span>
@@ -1007,7 +1007,10 @@ async function goLive(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){
     $('#login').hidden=false;
-    $('#loginForm').addEventListener('submit',async ev=>{ev.preventDefault();const {error}=await sb.auth.signInWithOtp({email:$('#lEmail').value,options:{emailRedirectTo:location.href.split('#')[0]}});$('#lMsg').textContent=error?`Mislukt: ${error.message}`:'Check je mail en klik op de link.';});
+    $('#loginForm').addEventListener('submit',async ev=>{ev.preventDefault();$('#lMsg').textContent='Bezig…';
+      const {error}=await sb.auth.signInWithPassword({email:$('#lEmail').value.trim(),password:$('#lPass').value});
+      if(error){$('#lMsg').textContent=error.message.includes('Invalid login')?'E-mail of wachtwoord klopt niet. Staat je account in Supabase onder Authentication → Users?':error.message.includes('not confirmed')?'Account nog niet bevestigd. Maak hem opnieuw aan met "Auto Confirm User" aan.':`Mislukt: ${error.message}`;return;}
+      $('#login').hidden=true;goLive();});
     return;
   }
   S.live=true; S.flows=[]; S.envelopes=[]; S.designs=[]; S.done=0; S.inbox=[]; S.log=[]; S.msgs=0;
