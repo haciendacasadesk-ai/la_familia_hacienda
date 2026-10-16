@@ -411,10 +411,11 @@ const TRENDS=['Dark academia studieprints','Plum Noir rozen','Plaid en countrysi
 const PRODUCTS=[['Poster',24.95],['Canvas',44.95],['Metal print',54.95],['Ingelijste print',39.95],['Mok',19.95]];
 
 function addLog(f,t,ty,m){
-  const e={tm:fmtTime(S.simMin),f,t,ty,m};
+  const e={tm:fmtTime(nowMin()),f,t,ty,m};
   S.log.unshift(e); if(S.log.length>120)S.log.pop();
   S.msgs++; renderFeedItem(e); renderKpis(); if(S.sel && (S.sel===f||S.sel===t)) renderDossier();
 }
+function nowMin(){if(!S.live)return S.simMin;const d=new Date();return d.getHours()*60+d.getMinutes()+d.getSeconds()/60;}
 function fmtTime(m){m=Math.floor(m)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 
 /* ---------- flows ---------- */
@@ -582,7 +583,7 @@ let scale=1,dpr=1;
 function resize(){dpr=window.devicePixelRatio||1;const w=cv.clientWidth;cv.width=Math.round(w*dpr);cv.height=Math.round(w*600/960*dpr);scale=cv.width/W;}
 new ResizeObserver(resize).observe(cv);
 
-function nightAmt(){const h=(S.simMin/60)%24;
+function nightAmt(){const h=(nowMin()/60)%24;
   if(h>=7&&h<18)return 0; if(h>=18&&h<20.5)return (h-18)/2.5; if(h>=20.5||h<5)return 1; return 1-(h-5)/2;}
 
 function rect(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
@@ -861,7 +862,7 @@ function frame(now){
       drawNight(T);drawLabels(T);
     } else drawWeb(T);
   }
-  $('#clock').textContent=fmtTime(S.simMin);
+  $('#clock').textContent=fmtTime(nowMin());
   requestAnimationFrame(frame);
 }
 
